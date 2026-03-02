@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Task Experiment</title>
+    <style>
+        :root {
+            --bg-gray: #f0f0f0;
+            --header-gray: #b0b0b0;
+            --input-gray: #d9d9d9;
+            --accent-dark: #888;
+        }
+
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            background-color: #666;
+        }
+
+        /* Container Layout */
+        .main-container {
+            display: flex;
+            width: 100%;
+            max-width: 1400px;
+            margin: auto;
+            background: white;
+            height: 90vh;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        /* Left Section: Task & Email */
+        .workspace {
+            flex: 3;
+            display: flex;
+            flex-direction: column;
+            border-right: 2px solid var(--header-gray);
+        }
+
+        .task-instruction {
+            background-color: var(--header-gray);
+            padding: 20px;
+            min-height: 100px;
+        }
+
+        .email-client {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 80px;
+            grid-gap: 15px;
+        }
+
+        /* UI Elements */
+        input, textarea {
+            background-color: var(--input-gray);
+            border: none;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .subject-line { grid-column: span 2; }
+        .message-body {
+            grid-column: span 3;
+            height: 400px;
+            resize: none;
+        }
+
+        .btn-send {
+            background-color: var(--input-gray);
+            cursor: pointer;
+            border-radius: 8px;
+            border: none;
+            font-weight: bold;
+        }
+
+        /* Right Section: AI Sidebar */
+        .ai-sidebar {
+            flex: 1;
+            background-color: var(--bg-gray);
+            padding: 20px;
+        }
+
+        .ai-card {
+            background: #e0e0e0;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: none; /* Hidden by default until AI "thinks" */
+        }
+
+        .ai-card.visible { display: block; }
+
+        .ai-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .ai-actions button {
+            flex: 1;
+            padding: 8px 0;
+            border: none;
+            border-radius: 4px;
+            background: var(--accent-dark);
+            color: white;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+
+        .ai-actions button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .cooldown-active {
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+    <div class="workspace">
+        <div class="task-instruction">
+            <h3>Task Instruction</h3>
+            <p>Write an email to <strong>Client X</strong></p>
+            <ul>
+                <li>Objective: Request a meeting for Friday</li>
+                <li>Tone: Professional</li>
+            </ul>
+        </div>
+
+        <div class="email-client">
+            <input type="text" placeholder="To" class="to-field">
+            <input type="text" placeholder="cc/bcc" class="cc-field">
+            <input type="text" id="subject" placeholder="Subject" class="subject-line">
+            <button class="btn-send">Send</button>
+            <textarea id="message" placeholder="Type your message here..." class="message-body"></textarea>
+        </div>
+    </div>
+
+    <div class="ai-sidebar">
+        <h3>AI Suggestion</h3>
+        <div id="aiCard" class="ai-card">
+            <p id="suggestionText">You should change the subject to: <strong>Meeting Request: Project Update</strong></p>
+            <div class="ai-actions">
+                <button onclick="handleAction('accept')" class="exp-btn">accept</button>
+                <button onclick="handleAction('reject')" class="exp-btn">reject</button>
+                <button onclick="handleAction('ignore')" class="exp-btn">ignore</button>
+            </div>
+            <p id="cooldownTimer" style="font-size: 11px; color: #666; margin-top: 10px;"></p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const messageInput = document.getElementById('message');
+    const aiCard = document.getElementById('aiCard');
+    const subjectInput = document.getElementById('subject');
+    const expButtons = document.querySelectorAll('.exp-btn');
+    const timerDisplay = document.getElementById('cooldownTimer');
+
+    let isCooldown = false;
+
+    // Simulated "Live AI" logic
+    messageInput.addEventListener('input', (e) => {
+        const val = e.target.value.toLowerCase();
+        
+        // Trigger suggestion if specific keywords are typed
+        if (val.includes('meet') || val.includes('friday')) {
+            aiCard.classList.add('visible');
+        } else if (val.length === 0) {
+            aiCard.classList.remove('visible');
+        }
+    });
+
+    function handleAction(action) {
+        if (isCooldown) return;
+
+        console.log(`User selected: ${action} at ${new Date().toISOString()}`);
+
+        if (action === 'accept') {
+            subjectInput.value = "Meeting Request: Project Update";
+        }
+
+        startCooldown();
+    }
+
+    function startCooldown() {
+        isCooldown = true;
+        let timeLeft = 3;
+        
+        expButtons.forEach(btn => btn.disabled = true);
+        
+        const countdown = setInterval(() => {
+            timerDisplay.innerText = `Cooldown active: ${timeLeft}s`;
+            timeLeft--;
+
+            if (timeLeft < 0) {
+                clearInterval(countdown);
+                isCooldown = false;
+                expButtons.forEach(btn => btn.disabled = false);
+                timerDisplay.innerText = "";
+            }
+        }, 1000);
+    }
+</script>
+
+</body>
+</html>
