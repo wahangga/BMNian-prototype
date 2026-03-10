@@ -4,37 +4,120 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $rawInput = file_get_contents('php://input');
     $input = json_decode($rawInput, true);
     
+    // if ($input['action'] === 'call_ai') {
+    //     $apiKey = "AIzaSyCc_FWUCru0hyx06DvEiP0ywPDryr5oDO0";
+    //     $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" . $apiKey;
+        
+    //     $payload = ["contents" => [["parts" => [["text" => $input['prompt']]]]]];
+        
+    //     $ch = curl_init($url);
+    //     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    //     curl_setopt($ch, CURLOPT_POST, true);
+    //     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+    //     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    //     $response = curl_exec($ch);
+    //     curl_close($ch);
+    //     echo $response;
+    //     exit;
+    // }
+    
     if ($input['action'] === 'call_ai') {
+
         $apiKey = "AIzaSyCc_FWUCru0hyx06DvEiP0ywPDryr5oDO0";
         $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" . $apiKey;
-        
-        $payload = ["contents" => [["parts" => [["text" => $input['prompt']]]]]];
-        
+    
+        $payload = [
+            "contents" => [
+                [
+                    "parts" => [
+                        ["text" => $input['prompt']]
+                    ]
+                ]
+            ]
+        ];
+    
         $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_TIMEOUT => 20,
+            CURLOPT_HTTPHEADER => [
+                "Content-Type: application/json"
+            ],
+            CURLOPT_POSTFIELDS => json_encode($payload)
+        ]);
+    
         $response = curl_exec($ch);
+    
+        if (curl_errno($ch)) {
+            echo json_encode([
+                "error" => curl_error($ch)
+            ]);
+            curl_close($ch);
+            exit;
+        }
+    
         curl_close($ch);
+    
+        header('Content-Type: application/json');
         echo $response;
         exit;
     }
 
+    // if ($input['action'] === 'send_results') {
+    //     $to = "takstarhp@gmail.com";
+    //     $from = "wahangganteng@gmail.com";
+    //     $subject = "RESEARCH DATA: Email AI Study - " . date("H:i:s");
+        
+    //     // Formatting the email body for better readability
+    //     $body = "PARTICIPANT SUMMARY:\n";
+    //     $body .= "--------------------------\n";
+    //     $body .= json_encode($input['results'], JSON_PRETTY_PRINT);
+        
+    //     $headers = "From: " . $from . "\r\n";
+    //     $headers .= "Reply-To: " . $from . "\r\n";
+    //     $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+
+    //     $success = mail($to, $subject, $body, $headers);
+    //     echo json_encode(["sent" => $success]);
+    //     exit;
+    // }
+    
     if ($input['action'] === 'send_results') {
+
         $to = "takstarhp@gmail.com";
         $from = "wahangganteng@gmail.com";
-        $subject = "RESEARCH DATA: Email AI Study - " . date("H:i:s");
-        
-        // Formatting the email body for better readability
-        $body = "PARTICIPANT SUMMARY:\n";
-        $body .= "--------------------------\n";
+        $subject = "RESEARCH DATA: Email AI Study - " . date("Y-m-d H:i:s");
+    
+        $body = "PARTICIPANT SUMMARY\n";
+        $body .= "============================\n\n";
         $body .= json_encode($input['results'], JSON_PRETTY_PRINT);
+        $body .= "\n\nSubmitted at: " . date("Y-m-d H:i:s");
+    
+        $headers = [];
+        $headers[] = "From: $from";
+        $headers[] = "Reply-To: $from";
+        $headers[] = "MIME-Version: 1.0";
+        $headers[] = "Content-Type: text/plain; charset=UTF-8";
+    
+        $success = mail($to, $subject, $body, implode("\r\n", $headers));
+    
+        header('Content-Type: application/json');
+        echo json_encode([
+            "sent" => $success
+        ]);
+    
+        exit;
+    }
+    
+        if ($input['action'] === 'send_results') {
+        $to = "takstarhp@gmail.com";
+        $from = "wahangganteng@gmail.com";
+        $subject = "Experiment Results - Participant ID: " . $input['participantId'];
+        $body = "Detailed Results:\n" . json_encode($input['results'], JSON_PRETTY_PRINT);
+        $headers = "From: " . $from;
         
-        $headers = "From: " . $from . "\r\n";
-        $headers .= "Reply-To: " . $from . "\r\n";
-        $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-
         $success = mail($to, $subject, $body, $headers);
         echo json_encode(["sent" => $success]);
         exit;
@@ -223,7 +306,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         const prompt = `Task: ${tasks[currentTask].points.join('. ')}. User draft: "${text}". Suggest the next 10 words to help complete the objectives.`;
         
         try {
-            const response = await fetch('experiment.php', {
+            const response = await fetch('qnmexperiment.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'call_ai', prompt: prompt })
@@ -291,7 +374,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     async function sendFinalData() {
         try {
-            await fetch('experiment.php', {
+            await fetch('qnmexperiment.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'send_results', results: allResults })
