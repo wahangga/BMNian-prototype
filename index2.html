@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BMNian Experiment Prototype</title>
+    <style>
+        :root { --bg: #333; --card: #ffffff; --grey: #e0e0e0; --accent: #d9d9d9; --text: #333; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; color: var(--text); }
+        #app { background: var(--card); width: 95vw; height: 90vh; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        
+        .screen { display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 40px; text-align: center; }
+        .active { display: flex; }
+
+        .task-container { display: flex; width: 100%; height: 100%; text-align: left; }
+        .main-task { flex: 3; background: #f4f4f4; padding: 25px; overflow-y: auto; position: relative; }
+        .ai-sidebar { flex: 1; background: #e8e8e8; border-left: 2px solid #ddd; padding: 20px; }
+
+        .input-group { margin-bottom: 15px; }
+        input, textarea { width: 100%; border: none; background: var(--grey); padding: 15px; border-radius: 10px; box-sizing: border-box; font-size: 14px; outline: none; }
+        textarea { height: 60%; resize: none; font-family: inherit; }
+        
+        .btn { background: #bbb; border: none; padding: 12px 30px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn:hover { background: #999; }
+        .send-btn { position: absolute; top: 25px; right: 25px; background: #ccc; }
+
+        .ai-box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-top: 20px; border-left: 5px solid #888; }
+        .ai-btns { display: flex; gap: 8px; margin-top: 15px; }
+        .ai-btns button { flex: 1; padding: 8px; border-radius: 5px; border: 1px solid #ccc; cursor: pointer; background: #f9f9f9; font-size: 12px; }
+        .ai-btns button:hover { background: #eee; }
+
+        .survey-grid { text-align: left; width: 100%; max-width: 600px; margin: 20px auto; }
+        .slider-row { margin-bottom: 20px; }
+        .slider-row label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input[type="range"] { width: 100%; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div id="screen-welcome" class="screen active">
+        <h1>Welcome</h1>
+        <p>Welcome to BMNian experiment</p>
+        <button class="btn" onclick="showScreen('screen-instruction')">Next</button>
+    </div>
+
+    <div id="screen-instruction" class="screen">
+        <h2>Instruction</h2>
+        <div style="text-align: left; background: #eee; padding: 20px; border-radius: 10px;">
+            <p>• You will complete 3 email writing tasks.</p>
+            <p>• Task 1: No AI help. Tasks 2 & 3: AI assistance provided.</p>
+            <p>• Follow all 5 objectives per task to avoid error rates.</p>
+            <p>• Your completion time is being recorded.</p>
+        </div>
+        <button class="btn" style="margin-top:20px" onclick="startTask(1)">Start Task 1</button>
+    </div>
+
+    <div id="screen-task" class="screen" style="padding: 0;">
+        <div class="task-container">
+            <div class="main-task">
+                <h2 id="task-title">Task 1</h2>
+                <div id="task-objectives" style="font-size: 0.9em; margin-bottom: 20px; color: #555;"></div>
+                <button class="btn send-btn" onclick="completeTask()">Send</button>
+                <div class="input-group"><input id="field-to" placeholder="To"></div>
+                <div class="input-group"><input id="field-cc" placeholder="cc/bcc"></div>
+                <div class="input-group"><input id="field-subject" placeholder="Subject"></div>
+                <textarea id="field-body" placeholder="Type your message here..." oninput="handleTyping()"></textarea>
+            </div>
+            <div class="ai-sidebar">
+                <h3>AI Suggestion</h3>
+                <div id="ai-loading" style="display:none; font-style: italic; color: #777;">AI is thinking...</div>
+                <div id="ai-suggestion-box" class="ai-box" style="display:none;">
+                    <p id="ai-text"></p>
+                    <div class="ai-btns">
+                        <button onclick="recordAI('accept')">Accept</button>
+                        <button onclick="recordAI('reject')">Reject</button>
+                        <button onclick="recordAI('ignore')">Ignore</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-survey" class="screen">
+        <h2>Task Feedback (NASA-TLX)</h2>
+        <p>Rate the task workload from 1 (Low) to 10 (High)</p>
+        <div class="survey-grid">
+            <div class="slider-row">
+                <label>Mental Demand (How mentally taxing was the task?)</label>
+                <input type="range" min="1" max="10" value="5" id="tlx-mental">
+            </div>
+            <div class="slider-row">
+                <label>Temporal Demand (How much time pressure did you feel?)</label>
+                <input type="range" min="1" max="10" value="5" id="tlx-temporal">
+            </div>
+            <div class="slider-row">
+                <label>Effort (How hard did you have to work?)</label>
+                <input type="range" min="1" max="10" value="5" id="tlx-effort">
+            </div>
+            <div class="slider-row">
+                <label>Frustration (How annoyed/stressed were you?)</label>
+                <input type="range" min="1" max="10" value="5" id="tlx-frustration">
+            </div>
+        </div>
+        <button class="btn" onclick="submitSurvey()">Next</button>
+    </div>
+
+    <div id="screen-thanks" class="screen">
+        <h1>Thank you for your participation</h1>
+        <p>Please download your results and send them to <b>takstarhp@gmail.com</b></p>
+        <button class="btn" onclick="downloadData()" style="background: #4CAF50; color: white;">Download Results (.txt)</button>
+    </div>
+</div>
+
+<script>
+    const API_KEY = "AIzaSyCc_FWUCru0hyx06DvEiP0ywPDryr5oDO0"; // Your Gemini Key
+    let currentTask = 1;
+    let startTime;
+    let aiTriggerCount = 0;
+    let experimentResults = [];
+    let currentAIStats = { accept: 0, reject: 0, ignore: 0 };
+
+    const taskConfigs = {
+        1: { title: "Task 1 (No AI)", objectives: "Write to: Professor S. • Subject: Absent • Objective 1: Apologize for missing class • Objective 2: Mention illness • Objective 3: Ask for slides.", aiLimit: 0 },
+        2: { title: "Task 2 (3 AI Interventions)", objectives: "Write to: Tech Support • Subject: Screen Issue • Objective 1: Report flickering • Objective 2: Mention it started today • Objective 3: Provide Laptop Model X1.", aiLimit: 3 },
+        3: { title: "Task 3 (5 AI Interventions)", objectives: "Write to: HR Team • Subject: Vacation Request • Objective 1: Request 2 weeks • Objective 2: Dates: June 1-14 • Objective 3: Mention colleague will cover.", aiLimit: 5 }
+    };
+
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    function startTask(num) {
+        currentTask = num;
+        aiTriggerCount = 0;
+        currentAIStats = { accept: 0, reject: 0, ignore: 0 };
+        document.getElementById('task-title').innerText = taskConfigs[num].title;
+        document.getElementById('task-objectives').innerText = taskConfigs[num].objectives;
+        document.getElementById('field-body').value = "";
+        document.getElementById('field-subject').value = "";
+        document.getElementById('ai-suggestion-box').style.display = 'none';
+        startTime = Date.now();
+        showScreen('screen-task');
+    }
+
+    function handleTyping() {
+        const config = taskConfigs[currentTask];
+        if (config.aiLimit > 0 && aiTriggerCount < config.aiLimit) {
+            let textLen = document.getElementById('field-body').value.length;
+            // Trigger AI every 60 characters for testing
+            if (textLen > 0 && textLen % 60 === 0) {
+                fetchGeminiAI();
+            }
+        }
+    }
+
+    async function fetchGeminiAI() {
+        aiTriggerCount++;
+        document.getElementById('ai-loading').style.display = 'block';
+        document.getElementById('ai-suggestion-box').style.display = 'none';
+
+        try {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: `The user is writing an email with these objectives: ${taskConfigs[currentTask].objectives}. Current draft: ${document.getElementById('field-body').value}. Give a one-sentence suggestion to improve it.` }] }]
+                })
+            });
+            const data = await response.json();
+            const suggestion = data.candidates[0].content.parts[0].text;
+            
+            document.getElementById('ai-text').innerText = suggestion;
+            document.getElementById('ai-loading').style.display = 'none';
+            document.getElementById('ai-suggestion-box').style.display = 'block';
+        } catch (e) {
+            console.error("AI Error", e);
+            document.getElementById('ai-loading').style.display = 'none';
+        }
+    }
+
+    function recordAI(choice) {
+        currentAIStats[choice]++;
+        document.getElementById('ai-suggestion-box').style.display = 'none';
+    }
+
+    function completeTask() {
+        const duration = (Date.now() - startTime) / 1000;
+        experimentResults.push({
+            task: currentTask,
+            timeSeconds: duration.toFixed(2),
+            aiInteractions: {...currentAIStats}
+        });
+        showScreen('screen-survey');
+    }
+
+    function submitSurvey() {
+        let lastResult = experimentResults[experimentResults.length - 1];
+        lastResult.survey = {
+            mental: document.getElementById('tlx-mental').value,
+            temporal: document.getElementById('tlx-temporal').value,
+            effort: document.getElementById('tlx-effort').value,
+            frustration: document.getElementById('tlx-frustration').value
+        };
+
+        if (currentTask < 3) {
+            startTask(currentTask + 1);
+        } else {
+            showScreen('screen-thanks');
+        }
+    }
+
+    function downloadData() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(experimentResults, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "experiment_results.json");
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    }
+</script>
+
+</body>
+</html>
