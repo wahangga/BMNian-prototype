@@ -4,23 +4,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $rawInput = file_get_contents('php://input');
     $input = json_decode($rawInput, true);
     
-    // if ($input['action'] === 'call_ai') {
-    //     $apiKey = "AIzaSyCc_FWUCru0hyx06DvEiP0ywPDryr5oDO0";
-    //     $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" . $apiKey;
-        
-    //     $payload = ["contents" => [["parts" => [["text" => $input['prompt']]]]]];
-        
-    //     $ch = curl_init($url);
-    //     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    //     curl_setopt($ch, CURLOPT_POST, true);
-    //     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-    //     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-    //     $response = curl_exec($ch);
-    //     curl_close($ch);
-    //     echo $response;
-    //     exit;
-    // }
-    
     if ($input['action'] === 'call_ai') {
 
         $apiKey = "AIzaSyCc_FWUCru0hyx06DvEiP0ywPDryr5oDO0";
@@ -65,25 +48,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // if ($input['action'] === 'send_results') {
-    //     $to = "takstarhp@gmail.com";
-    //     $from = "wahangganteng@gmail.com";
-    //     $subject = "RESEARCH DATA: Email AI Study - " . date("H:i:s");
-        
-    //     // Formatting the email body for better readability
-    //     $body = "PARTICIPANT SUMMARY:\n";
-    //     $body .= "--------------------------\n";
-    //     $body .= json_encode($input['results'], JSON_PRETTY_PRINT);
-        
-    //     $headers = "From: " . $from . "\r\n";
-    //     $headers .= "Reply-To: " . $from . "\r\n";
-    //     $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-
-    //     $success = mail($to, $subject, $body, $headers);
-    //     echo json_encode(["sent" => $success]);
-    //     exit;
-    // }
-    
     if ($input['action'] === 'send_results') {
 
         $to = "takstarhp@gmail.com";
@@ -248,6 +212,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     let aiTriggerCount = 0;
     let allResults = [];
     let currentAIStats = { accept: 0, reject: 0, ignore: 0 };
+    let aiSuggestions = [];
 
     const tasks = {
         1: { limit: 0, to: "manager@office.com", sub: "Status Update", points: ["1. Project on track", "2. Met 3 milestones", "3. Need budget review", "4. Schedule meeting", "5. Thanks for support"] },
@@ -270,6 +235,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         currentTask = num;
         aiTriggerCount = 0;
         currentAIStats = { accept: 0, reject: 0, ignore: 0 };
+        aiSuggestions = [];
         
         // RESET FIELDS
         document.getElementById('f-to').value = "";
@@ -315,7 +281,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // SECURITY FIX: Accessing response directly without eval() or unsafe functions
             if (data.candidates && data.candidates[0].content.parts[0].text) {
-                document.getElementById('ai-text').innerText = data.candidates[0].content.parts[0].text;
+                const suggestion = data.candidates[0].content.parts[0].text;
+                document.getElementById('ai-text').innerText = suggestion;
+                aiSuggestions.push(suggestion);
                 document.getElementById('ai-box').style.display = 'block';
                 document.getElementById('ai-status').innerText = "Suggestion ready.";
             }
@@ -332,7 +300,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     function finishTask() {
         const duration = (Date.now() - timerStart) / 1000;
-        allResults.push({ task: currentTask, duration: duration, ai: {...currentAIStats} });
+        allResults.push({ 
+            task: currentTask, 
+            duration: duration, 
+            ai: {...currentAIStats}, 
+            inputs: {
+                to: document.getElementById('f-to').value,
+                sub: document.getElementById('f-sub').value,
+                body: document.getElementById('f-body').value
+            },
+            aiSuggestions: [...aiSuggestions]
+        });
         setupTLX();
         showScreen('screen-tlx');
     }
@@ -350,7 +328,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         dims.forEach(d => {
             html += `<div class="tlx-row">
                 <label>${d.n}</label><span style="font-size:12px; color:#666;">${d.d}</span>
-                <input type="range" min="1" max="20" id="tlx-${d.id}">
+                <input type="range" min="1" max="10" id="tlx-${d.id}">
                 <div style="display:flex; justify-content:space-between; font-size:10px;"><span>Low/Good</span><span>High/Poor</span></div>
             </div>`;
         });
@@ -373,11 +351,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     async function sendFinalData() {
+        const data = { results: allResults };
+        
+        // Automatically download results to user's PC
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'experiment_results.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        // Send results via email
         try {
             await fetch('qnmexperiment.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'send_results', results: allResults })
+                body: JSON.stringify({ action: 'send_results', ...data })
             });
         } catch (e) { console.error("Email Error:", e); }
         showScreen('screen-thanks');
