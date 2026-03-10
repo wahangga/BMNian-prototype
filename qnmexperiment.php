@@ -6,8 +6,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if ($input['action'] === 'call_ai') {
 
-        $apiKey = "AIzaSyCc_FWUCru0hyx06DvEiP0ywPDryr5oDO0";
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" . $apiKey;
+        $apiKey = "";
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=" . $apiKey;
     
         $payload = [
             "contents" => [
@@ -72,18 +72,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             "sent" => $success
         ]);
     
-        exit;
-    }
-    
-        if ($input['action'] === 'send_results') {
-        $to = "takstarhp@gmail.com";
-        $from = "wahangganteng@gmail.com";
-        $subject = "Experiment Results - Participant ID: " . $input['participantId'];
-        $body = "Detailed Results:\n" . json_encode($input['results'], JSON_PRETTY_PRINT);
-        $headers = "From: " . $from;
-        
-        $success = mail($to, $subject, $body, $headers);
-        echo json_encode(["sent" => $success]);
         exit;
     }
 }
@@ -242,6 +230,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         document.getElementById('f-sub').value = "";
         document.getElementById('f-body').value = "";
         document.getElementById('ai-box').style.display = 'none';
+        document.getElementById('ai-text').innerText = "";
         
         document.getElementById('task-name').innerText = "Task " + num;
         let objHtml = `<b>To:</b> ${tasks[num].to}<br><b>Subject:</b> ${tasks[num].sub}<hr>`;
@@ -258,8 +247,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         const config = tasks[currentTask];
         if (config.limit > 0 && aiTriggerCount < config.limit) {
             let body = document.getElementById('f-body').value;
-            // TRIGGER AI EVERY 50 CHARACTERS
-            if (body.length > 0 && body.length % 50 === 0) {
+            // TRIGGER AI EVERY 25 CHARACTERS
+            if (body.length > 0 && body.length % 25 === 0) {
                 callGemini(body);
             }
         }
@@ -269,7 +258,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         aiTriggerCount++;
         document.getElementById('ai-status').innerText = "AI is thinking...";
         
-        const prompt = `Task: ${tasks[currentTask].points.join('. ')}. User draft: "${text}". Suggest the next 10 words to help complete the objectives.`;
+        let taskContext = `Task: Write an email to ${tasks[currentTask].to} with subject "${tasks[currentTask].sub}" covering these points: ${tasks[currentTask].points.join(', ')}.`;
+        
+        let prompt;
+        if (aiTriggerCount === 1) {
+            prompt = `Don't give full email suggestions. Check if the recipient "${document.getElementById('f-to').value}" is correct. It should be "${tasks[currentTask].to}". If incorrect, say "The recipient may be incorrect, it should be ${tasks[currentTask].to}." If correct, say "The recipient looks correct." Do not use bold, markdown, options, or multiple suggestions.`;
+        } else if (aiTriggerCount === 2) {
+            prompt = `Don't give full email suggestions. Evaluate if the subject "${document.getElementById('f-sub').value}" is related to "${tasks[currentTask].sub}". If similarity is over 75%, say "The subject looks good." Else say "The subject may be incorrect, it should be ${tasks[currentTask].sub}." Do not use bold, markdown, options, or multiple suggestions.`;
+        } else {
+            const objIndex = aiTriggerCount - 3;
+            const obj = tasks[currentTask].points[objIndex] || tasks[currentTask].points[0];
+            prompt = `${taskContext} The user has written in the body: "${text}". Based on objective: ${obj}. Suggest ONLY the next 1-2 words to continue the email. Do not provide full sentences, paragraphs, or complete suggestions. Keep it very short and incremental.`;
+        }
         
         try {
             const response = await fetch('qnmexperiment.php', {
@@ -279,23 +279,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
             const data = await response.json();
             
-            // SECURITY FIX: Accessing response directly without eval() or unsafe functions
+            // newer models may use `output` array instead of `candidates`
+            let suggestion = null;
             if (data.candidates && data.candidates[0].content.parts[0].text) {
-                const suggestion = data.candidates[0].content.parts[0].text;
-                document.getElementById('ai-text').innerText = suggestion;
-                aiSuggestions.push(suggestion);
+                suggestion = data.candidates[0].content.parts[0].text;
+            } else if (data.output && data.output.length > 0) {
+                // example format: data.output[0].content[0].text
+                const out = data.output[0];
+                if (out && out.content && out.content.length > 0) {
+                    suggestion = out.content.map(c => c.text || '').join('');
+                }
+            }
+            if (suggestion) {
+                // if AI returns an empty or "no suggestion" response, replace with a general suggestion
+                let displayText = suggestion;
+                if (!suggestion || /no suggestion/i.test(suggestion)) {
+                    displayText = "Please check the recipient email address, verify the subject line, and review the task objectives.";
+                }
+                aiSuggestions.push(displayText);
+                
+                // display latest suggestion
+                document.getElementById('ai-text').innerText = displayText;
+                document.getElementById('ai-box').style.display = 'block';
+                document.getElementById('ai-status').innerText = "Suggestion ready.";
+            } else {
+                document.getElementById('ai-text').innerText = "No suggestion available.";
                 document.getElementById('ai-box').style.display = 'block';
                 document.getElementById('ai-status').innerText = "Suggestion ready.";
             }
         } catch (e) {
             console.error("AI Error:", e);
+            document.getElementById('ai-text').innerText = "Error fetching suggestion: " + e.message;
+            document.getElementById('ai-box').style.display = 'block';
+            document.getElementById('ai-status').innerText = "Error occurred.";
         }
     }
 
     function aiAction(type) {
         currentAIStats[type]++;
-        document.getElementById('ai-box').style.display = 'none';
-        document.getElementById('ai-status').innerText = "Ready to assist...";
+        // keep suggestion visible even after user action
+
+        if (type === 'accept') {
+            const suggestion = document.getElementById('ai-text').innerText;
+            
+            // handle recipient correction
+            if (suggestion.toLowerCase().includes('recipient may be incorrect')) {
+                const match = suggestion.match(/it should be ([\w@.\-]+)/i);
+                if (match) {
+                    document.getElementById('f-to').value = match[1];
+                }
+            }
+            // handle subject correction separately; do not append any body text in this case
+            else if (suggestion.toLowerCase().includes('subject may be incorrect')) {
+                const match = suggestion.match(/it should be ([^\.]*)/i);
+                if (match) {
+                    document.getElementById('f-sub').value = match[1].trim();
+                }
+            }
+            // otherwise treat it as a body suggestion
+            else {
+                const currentBody = document.getElementById('f-body').value;
+                const cleanSuggestion = suggestion.replace(/"/g, '').trim();
+                document.getElementById('f-body').value = currentBody + ' ' + cleanSuggestion;
+            }
+        }
+        
+        // Disable buttons after action
+        document.querySelectorAll('#ai-box button').forEach(btn => btn.disabled = true);
     }
 
     function finishTask() {
@@ -327,9 +377,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         let html = "";
         dims.forEach(d => {
             html += `<div class="tlx-row">
-                <label>${d.n}</label><span style="font-size:12px; color:#666;">${d.d}</span>
+                <label>${d.n}</label><br><span style="font-size:12px; color:#666;">${d.d}</span>
                 <input type="range" min="1" max="10" id="tlx-${d.id}">
-                <div style="display:flex; justify-content:space-between; font-size:10px;"><span>Low/Good</span><span>High/Poor</span></div>
+                <div style="display:flex; justify-content:space-between; font-size:10px;"><span>Very Low</span><span>Very High</span></div>
             </div>`;
         });
         document.getElementById('tlx-form').innerHTML = html;
@@ -364,12 +414,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Send results via email
         try {
-            await fetch('qnmexperiment.php', {
+            const response = await fetch('qnmexperiment.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'send_results', ...data })
             });
-        } catch (e) { console.error("Email Error:", e); }
+            const result = await response.json();
+            console.log('Email send result:', result);
+            if (!result.sent) {
+                alert('Email sending failed. Check console for details.');
+            }
+        } catch (e) { 
+            console.error("Email Error:", e); 
+            alert('Error sending email: ' + e.message);
+        }
         showScreen('screen-thanks');
     }
 </script>
