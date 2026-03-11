@@ -7,6 +7,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($input['action'] === 'call_ai') {
 
         $apiKey = "";
+        // using gemini-3.1-flash-lite-preview; response format may differ from earlier models
         $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=" . $apiKey;
     
         $payload = [
@@ -167,13 +168,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="ai-sidebar">
                 <h3>AI Assistant</h3>
                 <div id="ai-status" style="color:#888; font-style:italic;">Inactive for this task</div>
-                <div id="ai-box" class="ai-msg" style="display:none;">
-                    <p id="ai-text" style="font-size: 14px; line-height: 1.4;"></p>
-                    <div style="margin-top:15px; display:flex; gap:5px;">
-                        <button onclick="aiAction('accept')" style="flex:1;">Accept</button>
-                        <button onclick="aiAction('reject')" style="flex:1;">Reject</button>
-                        <button onclick="aiAction('ignore')" style="flex:1;">Ignore</button>
-                    </div>
+                <div id="ai-box" style="display:none;">
                 </div>
             </div>
         </div>
@@ -230,7 +225,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         document.getElementById('f-sub').value = "";
         document.getElementById('f-body').value = "";
         document.getElementById('ai-box').style.display = 'none';
-        document.getElementById('ai-text').innerText = "";
+        document.getElementById('ai-box').innerHTML = "";
         
         document.getElementById('task-name').innerText = "Task " + num;
         let objHtml = `<b>To:</b> ${tasks[num].to}<br><b>Subject:</b> ${tasks[num].sub}<hr>`;
@@ -299,28 +294,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 aiSuggestions.push(displayText);
                 
                 // display latest suggestion
-                document.getElementById('ai-text').innerText = displayText;
+                const suggestionDiv = document.createElement('div');
+                suggestionDiv.className = 'ai-msg';
+                suggestionDiv.innerHTML = `
+                    <p style="font-size: 14px; line-height: 1.4;">${displayText}</p>
+                    <div style="margin-top:15px; display:flex; gap:5px;">
+                        <button onclick="aiAction('accept', this)" style="flex:1;">Accept</button>
+                        <button onclick="aiAction('reject', this)" style="flex:1;">Reject</button>
+                        <button onclick="aiAction('ignore', this)" style="flex:1;">Ignore</button>
+                    </div>
+                `;
+                document.getElementById('ai-box').appendChild(suggestionDiv);
                 document.getElementById('ai-box').style.display = 'block';
                 document.getElementById('ai-status').innerText = "Suggestion ready.";
             } else {
-                document.getElementById('ai-text').innerText = "No suggestion available.";
+                const suggestionDiv = document.createElement('div');
+                suggestionDiv.className = 'ai-msg';
+                suggestionDiv.innerHTML = `
+                    <p style="font-size: 14px; line-height: 1.4;">No suggestion available.</p>
+                    <div style="margin-top:15px; display:flex; gap:5px;">
+                        <button onclick="aiAction('accept', this)" style="flex:1;">Accept</button>
+                        <button onclick="aiAction('reject', this)" style="flex:1;">Reject</button>
+                        <button onclick="aiAction('ignore', this)" style="flex:1;">Ignore</button>
+                    </div>
+                `;
+                document.getElementById('ai-box').appendChild(suggestionDiv);
                 document.getElementById('ai-box').style.display = 'block';
                 document.getElementById('ai-status').innerText = "Suggestion ready.";
             }
         } catch (e) {
             console.error("AI Error:", e);
-            document.getElementById('ai-text').innerText = "Error fetching suggestion: " + e.message;
+            const suggestionDiv = document.createElement('div');
+            suggestionDiv.className = 'ai-msg';
+            suggestionDiv.innerHTML = `
+                <p style="font-size: 14px; line-height: 1.4;">Error fetching suggestion: ${e.message}</p>
+                <div style="margin-top:15px; display:flex; gap:5px;">
+                    <button onclick="aiAction('accept', this)" style="flex:1;">Accept</button>
+                    <button onclick="aiAction('reject', this)" style="flex:1;">Reject</button>
+                    <button onclick="aiAction('ignore', this)" style="flex:1;">Ignore</button>
+                </div>
+            `;
+            document.getElementById('ai-box').appendChild(suggestionDiv);
             document.getElementById('ai-box').style.display = 'block';
             document.getElementById('ai-status').innerText = "Error occurred.";
         }
     }
 
-    function aiAction(type) {
+    function aiAction(type, button) {
         currentAIStats[type]++;
         // keep suggestion visible even after user action
 
+        const suggestion = button.parentElement.previousElementSibling.innerText;
+
         if (type === 'accept') {
-            const suggestion = document.getElementById('ai-text').innerText;
             
             // handle recipient correction
             if (suggestion.toLowerCase().includes('recipient may be incorrect')) {
@@ -344,8 +370,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         
-        // Disable buttons after action
-        document.querySelectorAll('#ai-box button').forEach(btn => btn.disabled = true);
+        // Disable buttons for this suggestion
+        button.parentElement.querySelectorAll('button').forEach(btn => btn.disabled = true);
     }
 
     function finishTask() {
