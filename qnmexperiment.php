@@ -1,5 +1,5 @@
 <?php
-// --- BACKEND HANDLER ---
+// --- BACKEND ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $rawInput = file_get_contents('php://input');
     $input = json_decode($rawInput, true);
@@ -7,7 +7,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($input['action'] === 'call_ai') {
 
         $apiKey = "";
-        // using gemini-3.1-flash-lite-preview; response format may differ from earlier models
+        // using gemini-3.1-flash-lite-preview
         $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=" . $apiKey;
     
         $payload = [
@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($input['action'] === 'send_results') {
 
-        $to = "takstarhp@gmail.com";
+        $to = "takstarhp@gmail.com, mojabalmejbel676@gmail.com";
         $from = "wahangganteng@gmail.com";
         $subject = "RESEARCH DATA: Email AI Study - " . date("Y-m-d H:i:s");
     
@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); margin: 0; color: var(--text); }
         #app { width: 100vw; height: 100vh; display: flex; flex-direction: column; }
         
-        /* Better Welcome Screen */
+        /* Welcome Screen */
         .screen { display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 50px; box-sizing: border-box; background: white; }
         .active { display: flex; }
         .hero-box { max-width: 600px; text-align: center; border-top: 8px solid var(--uu-yellow); padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border-radius: 4px; }
@@ -105,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         input.field { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         textarea.field { width: 100%; height: 300px; padding: 15px; border: 1px solid #ccc; border-radius: 4px; resize: none; font-size: 15px; line-height: 1.6; }
         
-        /* NASA TLX Fix */
+        /* NASA TLX */
         .survey-container { width: 100%; max-width: 700px; overflow-y: auto; max-height: 70vh; padding: 20px; border: 1px solid #eee; }
         .tlx-row { margin-bottom: 30px; }
         input[type=range] { width: 100%; margin: 15px 0; }
@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div id="screen-welcome" class="screen active">
         <div class="hero-box">
             <h1>Welcome to BMNian experiment</h1>
-            <p>Thank you for participating in our study</p>
+            <!--<p>Thank you for participating in our study</p>-->
             <p style="font-size: 0.9em; color: #666;">This study takes approximately 10-15 minutes.</p>
             <button class="btn" onclick="showScreen('screen-consent')">Begin Study</button>
         </div>
@@ -196,6 +196,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     let allResults = [];
     let currentAIStats = { accept: 0, reject: 0, ignore: 0 };
     let aiSuggestions = [];
+    let participantID='P-'+Date.now().toString(36)+'-'+Math.random().toString(36).substring(2,8);
 
     const tasks = {
         1: { limit: 0, to: "manager@office.com", sub: "Status Update", points: ["1. Project on track", "2. Met 3 milestones", "3. Need budget review", "4. Schedule meeting", "5. Thanks for support"] },
@@ -228,7 +229,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         document.getElementById('ai-box').innerHTML = "";
         
         document.getElementById('task-name').innerText = "Task " + num;
-        let objHtml = `<b>To:</b> ${tasks[num].to}<br><b>Subject:</b> ${tasks[num].sub}<hr>`;
+        let objHtml = `<b>Write an email</b><br><br><b>To:</b> ${tasks[num].to}<br><b>Subject:</b> ${tasks[num].sub}<br><br><b>Mention this points in the email:</b><hr>`;
         tasks[num].points.forEach(p => objHtml += `<div class='obj-item'>${p}</div>`);
         document.getElementById('obj-list').innerHTML = objHtml;
         
@@ -263,7 +264,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             const objIndex = aiTriggerCount - 3;
             const obj = tasks[currentTask].points[objIndex] || tasks[currentTask].points[0];
-            prompt = `${taskContext} The user has written in the body: "${text}". Based on objective: ${obj}. Suggest ONLY the next 1-2 words to continue the email. Do not provide full sentences, paragraphs, or complete suggestions. Keep it very short and incremental.`;
+            prompt = `${taskContext} The user has written in the body: "${text}". Based on objective: ${obj}. Suggest ONLY the next 1 sentence to continue the email. Do not provide full sentences, paragraphs, or complete suggestions. Keep it very short and incremental.`;
         }
         
         try {
@@ -274,12 +275,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
             const data = await response.json();
             
-            // newer models may use `output` array instead of `candidates`
+            // handle response
             let suggestion = null;
             if (data.candidates && data.candidates[0].content.parts[0].text) {
                 suggestion = data.candidates[0].content.parts[0].text;
             } else if (data.output && data.output.length > 0) {
-                // example format: data.output[0].content[0].text
                 const out = data.output[0];
                 if (out && out.content && out.content.length > 0) {
                     suggestion = out.content.map(c => c.text || '').join('');
@@ -342,7 +342,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     function aiAction(type, button) {
         currentAIStats[type]++;
-        // keep suggestion visible even after user action
+        // suggestion
 
         const suggestion = button.parentElement.previousElementSibling.innerText;
 
@@ -375,15 +375,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     function finishTask() {
+        const to = document.getElementById('f-to').value.trim();
+        const sub = document.getElementById('f-sub').value.trim();
+        const body = document.getElementById('f-body').value.trim();
+        
+        if (!to || !sub || !body) {
+            alert("Please fill in all fields (To, Subject, and Body) before sending the email.");
+            return;
+        }
+        
         const duration = (Date.now() - timerStart) / 1000;
         allResults.push({ 
             task: currentTask, 
             duration: duration, 
             ai: {...currentAIStats}, 
             inputs: {
-                to: document.getElementById('f-to').value,
-                sub: document.getElementById('f-sub').value,
-                body: document.getElementById('f-body').value
+                to: to,
+                sub: sub,
+                body: body
             },
             aiSuggestions: [...aiSuggestions]
         });
@@ -427,7 +436,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     async function sendFinalData() {
-        const data = { results: allResults };
+        const data = { participantID:participantID, results: allResults };
         
         // Automatically download results to user's PC
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
