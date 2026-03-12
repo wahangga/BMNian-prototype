@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div id="screen-welcome" class="screen active">
         <div class="hero-box">
             <h1>Welcome to BMNian experiment</h1>
-            <p>Thank you for agreeing to participate in our research on Human-AI Interaction.</p>
+            <p>Thank you for participating in our study</p>
             <p style="font-size: 0.9em; color: #666;">This study takes approximately 10-15 minutes.</p>
             <button class="btn" onclick="showScreen('screen-consent')">Begin Study</button>
         </div>
@@ -243,7 +243,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (config.limit > 0 && aiTriggerCount < config.limit) {
             let body = document.getElementById('f-body').value;
             // TRIGGER AI EVERY 25 CHARACTERS
-            if (body.length > 0 && body.length % 25 === 0) {
+            if (body.length > 0 && body.length % 17 === 0) {
                 callGemini(body);
             }
         }
