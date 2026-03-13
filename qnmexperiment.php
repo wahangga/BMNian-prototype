@@ -113,6 +113,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .btn { background: #333; color: white; border: none; padding: 15px 40px; cursor: pointer; font-size: 16px; border-radius: 4px; }
         .btn:hover { background: #000; }
         .ai-msg { background: white; padding: 20px; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-top: 20px; border-left: 5px solid var(--uu-yellow); }
+        
+        .consent-text {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 15px 0;
+            background: #fafafa;
+        }
+        
+        .consent-check label {
+            display: block;
+            margin-bottom: 10px;
+        }
+
     </style>
 </head>
 <body>
@@ -128,17 +143,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <div id="screen-consent" class="screen">
-        <div class="hero-box" style="text-align: left;">
+        <div class="hero-box" style="text-align:left; max-width:700px; margin:auto;">
+    
             <h2>Informed Consent</h2>
-            <p>Please confirm your understanding by checking the boxes below:</p>
-            <div style="margin: 20px 0;">
-                <label style="display:block; margin-bottom:12px;"><input type="checkbox" class="c-check"> My participation is voluntary and I can stop at any time.</label>
-                <label style="display:block; margin-bottom:12px;"><input type="checkbox" class="c-check"> I understand my data will be sent anonymously for analysis.</label>
-                <label style="display:block; margin-bottom:12px;"><input type="checkbox" class="c-check"> I understand that some tasks involve an AI writing assistant.</label>
+    
+            <!-- Scrollable study info -->
+            <div class="consent-text">
+                <p><strong>Study Title:</strong> The Impact of AI Suggestion Frequency on Student Cognitive Workload and Performance</p>
+    
+                <p><strong>Researchers:</strong> This study is being conducted by Mojab Almejbel, I Gusti Agung Ngurah Anggawijaya, and Bharath Kumar Sokke Prabhu, master's students in the HCI program at Utrecht University.</p>
+    
+                <p><strong>Invitation and Purpose</strong><br>
+                You are invited to participate in a study on how AI suggestions affect the experience of writing an email. The goal is to measure cognitive load, the mental effort required to complete a task.</p>
+    
+                <p><strong>What Participation Involves</strong><br>
+                You will be asked to write an email that meets 5 specific objectives. While writing, an AI will provide you with suggestions. After completing the email, you will answer a few short questions to rate the mental effort the task required. The entire session will take approximately 10-15 minutes.</p>
+    
+                <p><strong>Use of Data</strong><br>
+                Your email content, the objectives you met, and your ratings will be collected for analysis. This data will be used to draw conclusions about cognitive load and performance when using AI writing tools.</p>
+    
+                <p><strong>Potential Risks and Your Rights</strong><br>
+                Participation is voluntary. There are no anticipated risks beyond those of normal computer use. You may:</p>
+                <ul>
+                    <li>Take breaks at any time,</li>
+                    <li>Stop your participation, or</li>
+                    <li>Withdraw from the study entirely, with no consequences.</li>
+                </ul>
+                <p>If you withdraw, you can request that your data be deleted by contacting the researcher.</p>
+    
+                <p><strong>Confidentiality</strong><br>
+                No personally identifiable information (like your name) will be stored with your data. Your responses will be saved anonymously using a participant code and stored securely on a password-protected university server, accessible only to the research team. Anonymized data will be retained for 10 years in line with university policy.</p>
+    
+                <p><strong>Contact</strong><br>
+                For questions about the study, contact:</p>
+                <ul>
+                    <li>m.almejbel@students.uu.nl</li>
+                    <li>a.igustiagungngurahanggawijaya@students.uu.nl</li>
+                    <li>b.k.sokkeprabhu@students.uu.nl</li>
+                </ul>
+                
+                <p><strong>For complaints or concerns:</strong></p>
+                <ul>
+                    <li>Ethics Review Board: etc-beta-geo@uu.nl</li>
+                    <li>Faculty Privacy Officer: privacy-beta@uu.nl</li>
+                </ul>
             </div>
+    
+            <p>Please confirm your understanding by checking the boxes below:</p>
+    
+            <!-- Fixed area -->
+            <div class="consent-check">
+                <label><input type="checkbox" class="c-check"> I have read and understood the information above.</label>
+                <label><input type="checkbox" class="c-check"> I understand participation is voluntary.</label>
+                <label><input type="checkbox" class="c-check"> I agree to participate in this study.</label>
+            </div>
+    
             <button class="btn" onclick="checkConsent()">Accept & Continue</button>
+    
         </div>
     </div>
+
+
 
     <div id="screen-instruction" class="screen">
         <div class="hero-box" style="text-align: left;">
@@ -402,12 +467,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     function setupTLX() {
         const dims = [
-            { id: "mental", n: "Mental Demand", d: "How much mental activity was required?" },
-            { id: "physical", n: "Physical Demand", d: "How much physical activity was required?" },
-            { id: "temporal", n: "Temporal Demand", d: "How much time pressure did you feel?" },
-            { id: "perf", n: "Performance", d: "How successful were you in your goals?" },
-            { id: "effort", n: "Effort", d: "How hard did you have to work?" },
-            { id: "frust", n: "Frustration", d: "How stressed or annoyed were you?" }
+            { id: "mental", n: "Mental Demand", d: "How much mental and perceptual activity was required for the task? Consider the complexity, decision‑making, and attentional demands." },
+            { id: "physical", n: "Physical Demand", d: "How much physical activity was required? Consider the amount of physical effort needed to complete the task." },
+            { id: "temporal", n: "Temporal Demand", d: "How much time pressure did you feel during the task? Consider whether the pace was slow, relaxed, rapid, or frantic." },
+            { id: "perf", n: "Performance", d: "How successful were you in accomplishing the task’s goals? Consider how satisfied you are with your performance." },
+            { id: "effort", n: "Effort", d: "How hard did you have to work mentally and physically to achieve your level of performance?" },
+            { id: "frust", n: "Frustration", d: "How insecure, discouraged, irritated, stressed, or annoyed did you feel during the task?" }
         ];
         let html = "";
         dims.forEach(d => {
