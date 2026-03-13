@@ -194,7 +194,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <!-- Fixed area -->
             <div class="consent-check">
                 <label><input type="checkbox" class="c-check"> I have read and understood the information above.</label>
-                <label><input type="checkbox" class="c-check"> I understand participation is voluntary.</label>
+                <label><input type="checkbox" class="c-check"> I understand that participation is voluntary and I can withdraw at any time.</label>
                 <label><input type="checkbox" class="c-check"> I agree to participate in this study.</label>
             </div>
     
