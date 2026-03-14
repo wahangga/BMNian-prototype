@@ -51,12 +51,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($input['action'] === 'send_results') {
 
-        $to = "takstarhp@gmail.com, mojabalmejbel676@gmail.com";
+        $to = "takstarhp@gmail.com, bharath77787@gmail.com";
         $from = "wahangganteng@gmail.com";
         $subject = "RESEARCH DATA: Email AI Study - " . date("Y-m-d H:i:s");
     
         $body = "PARTICIPANT SUMMARY\n";
         $body .= "============================\n\n";
+        $body .= "Participant ID: " . ($input['participantID'] ?? 'UNKNOWN') . "\n\n";
         $body .= json_encode($input['results'], JSON_PRETTY_PRINT);
         $body .= "\n\nSubmitted at: " . date("Y-m-d H:i:s");
     
